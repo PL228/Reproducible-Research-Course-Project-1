@@ -1,0 +1,62 @@
+---
+title: "Reproducible Research Week2 Course Project 1"
+author: "PL"
+date: '2022-07-04'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This assignment makes use of data from a personal activity monitoring device. This device collects data at 5 minute intervals through out the day. The data consists of two months of data from an anonymous individual collected during the months of October and November, 2012 and include the number of steps taken in 5 minute intervals each day.
+
+```{r load package}
+library(ggplot2)
+library(dplyr)
+```
+
+## 1. Code for reading in the dataset and/or processing the data
+Unzip the file
+```{r unzipFile}
+path <- getwd()
+unzip ("repdata_data_activity.zip", exdir=path)
+
+# read the data to file and see the summary of the data
+Activity <- read.csv("activity.csv")
+summary(Activity)
+names(Activity)
+head(Activity)
+```
+
+## 2. Histogram of the total number of steps taken each day
+
+Count total number of steps taken per day
+```{r count_daily_step}
+total_steps <- Activity %>%
+  group_by(date) %>%
+  summarise(daily_steps = sum(steps, na.rm = TRUE))
+```
+
+Histogram of the total number of steps taken each day
+```{r dailySteps}
+hist(total_steps$daily_steps, xlab = "Total Steps per day", main = "Histogram of Total Number of Steps taken each day")
+```
+
+## 3. Mean and median number of steps taken each day
+```{r mean_median_step}
+meanStep = mean(total_steps$daily_steps, na.rm=TRUE)
+medianStep = median(total_steps$daily_steps, na.rm=TRUE)
+```
+
+The Mean number of steps taken each day is `r meanStep`  
+The Median number of steps taken each day is `r medianStep`
+
+## 4. Time series plot of the average number of steps taken
+```{r time_series}
+stepsPerInterval<-aggregate(steps~interval, data=Activity, mean, na.rm=TRUE)
+plot(steps~interval, data=stepsPerInterval, type="l")
+```
+
