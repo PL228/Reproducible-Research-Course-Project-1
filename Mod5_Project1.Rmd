@@ -16,6 +16,8 @@ This assignment makes use of data from a personal activity monitoring device. Th
 ```{r load package}
 library(ggplot2)
 library(dplyr)
+library(lubridate)
+library(magrittr)
 ```
 
 ## 1. Code for reading in the dataset and/or processing the data
@@ -49,14 +51,108 @@ hist(total_steps$daily_steps, xlab = "Total Steps per day", main = "Histogram of
 ```{r mean_median_step}
 meanStep = mean(total_steps$daily_steps, na.rm=TRUE)
 medianStep = median(total_steps$daily_steps, na.rm=TRUE)
+
+# The Mean number of steps taken each day are  
+meanStep
+
+# The Median number of steps taken each day are
+medianStep
 ```
 
-The Mean number of steps taken each day is `r meanStep`  
-The Median number of steps taken each day is `r medianStep`
+
 
 ## 4. Time series plot of the average number of steps taken
 ```{r time_series}
-stepsPerInterval<-aggregate(steps~interval, data=Activity, mean, na.rm=TRUE)
-plot(steps~interval, data=stepsPerInterval, type="l")
+interval_steps <- Activity %>% 
+  group_by(interval) %>%
+  summarise(steps = mean(steps, na.rm =TRUE))
+
+plot(steps~interval, data=interval_steps, type="l")
+
+max_interval_steps <- interval_steps[which.max(interval_steps$steps),]$interval
 ```
 
+## 5. The 5-minute interval that, on average, contains the maximum number of steps
+
+The maximum number of steps of the 5-minutes interval is `r max_interval_steps`.
+
+## 6. Code to describe and show a strategy for imputing missing data
+
+```{r no_of_NA}
+totalNA<- sum(is.na(Activity$steps))
+```
+Total number of missing values is `r totalNA`.
+
+Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.
+
+```{r interval_mean}
+interval_steps_mean <- function(interval){
+    interval_steps[interval_steps$interval==interval,]$steps
+}
+```
+
+Create a new dataset that is equal to the original dataset but with the missing data filled in.
+
+```{r Activy_data_without_NA}
+ActivityNoNA <- Activity
+for(i in 1:nrow(ActivityNoNA)){
+    if(is.na(ActivityNoNA[i,]$steps)){
+        ActivityNoNA[i,]$steps <- interval_steps_mean(ActivityNoNA[i,]$interval)
+    }
+}
+```
+
+
+
+
+
+## 7. Histogram of the total number of steps taken each day after missing values are imputed
+
+```{r}
+daily_steps_NoNA <- aggregate(steps ~ date, data=ActivityNoNA, sum)
+hist(daily_steps_NoNA$steps, xlab = "Total Steps per day", main = "Histogram of Total Number of Steps taken each day with no missing values")
+
+meanStepNoNA <- mean(daily_steps_NoNA$steps)
+medianStepNoNA <- median(daily_steps_NoNA$steps)
+
+# The median steps without missing value are
+meanStepNoNA
+
+# The median steps without missing value are
+medianStepNoNA
+
+mean_diff <- meanStepNoNA - meanStep
+median_diff <- medianStepNoNA - medianStep
+
+# The mean steps difference between data with and without missing values are
+mean_diff
+
+# The median steps difference between data with and without missing values are
+median_diff
+```
+
+
+
+## 8. Panel plot comparing the average number of steps taken per 5-minute interval across weekdays and weekends
+
+```{r}
+
+day_of_week <- ActivityNoNA %>%
+  mutate(
+    date = ymd(date),
+    weekday_or_weekend = case_when(wday(date) %in% 2:6 ~ "Weekday",
+                                   wday(date) %in% c(1,7) ~ "Weekend")
+  ) %>% select(-date) %>%
+  group_by(interval, weekday_or_weekend) %>%
+  summarise(
+    steps = mean(steps)
+  )
+
+# Creating the data set that to plot
+
+ggplot(day_of_week, aes(interval, steps))  +
+    geom_line()  +
+    facet_wrap(~weekday_or_weekend, nrow = 2) +
+    xlab("5-Minute intervals")  +
+    ylab("Average number of steps")
+```
